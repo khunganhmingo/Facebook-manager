@@ -19,7 +19,6 @@ const tabTitles: Record<NavTab, { title: string; subtitle: string }> = {
   prompts: { title: 'Cấu hình System Prompt', subtitle: 'Tùy biến hành vi AI Agent và biến số cho từng Fanpage' },
   pages: { title: 'Danh sách Fanpage', subtitle: 'Kết nối và quản lý mã token của các trang Facebook' },
   settings: { title: 'Cài đặt hệ thống & Webhook', subtitle: 'Cấu hình AI Provider và thông số xác thực Webhook' },
-  admin: { title: 'Quản trị hệ thống & Hạn mức User', subtitle: 'Theo dõi lượng Facebook, số lượng AI Agent và gia hạn thời gian sử dụng' },
 };
 
 export const Header: React.FC<HeaderProps> = ({

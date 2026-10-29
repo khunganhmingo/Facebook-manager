@@ -61,15 +61,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const init = async () => {
       setLoading(true);
-      try {
-        const isLoggedOut = localStorage.getItem('socialagent_logged_out') === 'true';
-        if (!isLoggedOut) {
-          await refreshProfile();
-          await refreshPages();
-        }
-      } finally {
-        setLoading(false);
-      }
+      await refreshProfile();
+      await refreshPages();
+      setLoading(false);
     };
     init();
   }, [refreshProfile, refreshPages]);
@@ -77,7 +71,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, pass: string) => {
     const res = await api.login({ email, password: pass });
     if (res.success) {
-      localStorage.removeItem('socialagent_logged_out');
       setStoredToken(res.token);
       setUser(res.user);
       await refreshPages();
@@ -87,13 +80,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     clearStoredToken();
-    try {
-      localStorage.setItem('socialagent_logged_out', 'true');
-    } catch {}
     setUser(null);
-    setPages([]);
-    setActivePageId(null);
-    toast('Đã thoát tài khoản thành công', 'info');
+    toast('Đã đăng xuất', 'info');
   };
 
   const activePage = pages.find(p => p.id === activePageId) || pages[0] || null;

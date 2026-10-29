@@ -1,12 +1,6 @@
 export interface User {
   id: number;
   email: string;
-  role?: 'admin' | 'user';
-  plan?: 'free' | 'pro' | 'enterprise';
-  subscription_expires_at?: string | null;
-  max_pages?: number;
-  max_agents?: number;
-  is_active?: boolean;
   ai_provider: string;
   ai_base_url?: string;
   ai_model?: string;
@@ -14,52 +8,6 @@ export interface User {
   masked_api_key?: string;
   timezone?: string;
   created_at?: string;
-}
-
-export interface SavedAIConfig {
-  id: number;
-  user_id: number;
-  name: string;
-  provider: string;
-  model: string;
-  base_url?: string | null;
-  has_custom_key?: boolean;
-  masked_api_key?: string | null;
-  is_default: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface AdminUserStats {
-  id: number;
-  email: string;
-  role: 'admin' | 'user';
-  plan: 'free' | 'pro' | 'enterprise';
-  is_active: boolean;
-  subscription_expires_at: string | null;
-  max_pages: number;
-  max_agents: number;
-  pages_count: number;
-  agents_count: number;
-  messages_count: number;
-  comments_count: number;
-  posts_count: number;
-  days_remaining: number;
-  status: 'active' | 'expiring_soon' | 'expired' | 'blocked';
-  pages?: Array<{ id: number; page_name: string; page_id: string; is_active: boolean; avatar_url?: string }>;
-  created_at: string;
-}
-
-export interface AdminOverviewStats {
-  total_users: number;
-  active_users: number;
-  expired_users: number;
-  total_pages: number;
-  total_agents: number;
-  total_messages: number;
-  total_comments: number;
-  total_posts: number;
-  ai_reply_rate: number;
 }
 
 export interface FacebookPage {

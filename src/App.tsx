@@ -12,29 +12,13 @@ import { InboxView } from './components/inbox/InboxView';
 import { CommentsView } from './components/comments/CommentsView';
 import { ContentGeneratorView } from './components/content/ContentGeneratorView';
 import { CalendarView } from './components/calendar/CalendarView';
-import { useAuth } from './context/AuthContext';
-import { LoginView } from './components/auth/LoginView';
 import { PromptManagerView } from './components/prompts/PromptManagerView';
 import { PagesView } from './components/pages/PagesView';
 import { SettingsView } from './components/settings/SettingsView';
-import { AdminDashboardView } from './components/admin/AdminDashboardView';
 
 function AppContent() {
-  const { user, loading } = useAuth();
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-  if (loading) {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <LoginView />;
-  }
 
   const handleRefresh = () => {
     setRefreshTrigger(prev => prev + 1);
@@ -85,9 +69,6 @@ function AppContent() {
           )}
           {currentTab === 'settings' && (
             <SettingsView key={`set-${refreshTrigger}`} />
-          )}
-          {currentTab === 'admin' && (
-            <AdminDashboardView key={`adm-${refreshTrigger}`} />
           )}
         </main>
       </div>
