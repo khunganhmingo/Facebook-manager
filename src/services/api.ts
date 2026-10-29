@@ -240,4 +240,80 @@ export const api = {
 
   getActivityLogs: (pageId?: number) =>
     request<{ success: boolean; logs: any[] }>(`/api/analytics/activity${pageId ? `?page_id=${pageId}` : ''}`),
+
+  // Saved AI Engine Configurations
+  getSavedAiConfigs: () =>
+    request<{ success: boolean; configs: any[] }>('/api/auth/ai-configs'),
+
+  saveAiConfig: (payload: {
+    id?: number;
+    name: string;
+    provider: string;
+    model: string;
+    baseUrl?: string;
+    apiKey?: string;
+    isDefault?: boolean;
+  }) =>
+    request<{ success: boolean; message: string; id?: number }>('/api/auth/ai-configs', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  setDefaultAiConfig: (id: number) =>
+    request<{ success: boolean; message: string; config?: any }>(`/api/auth/ai-configs/${id}/set-default`, {
+      method: 'POST',
+    }),
+
+  deleteAiConfig: (id: number) =>
+    request<{ success: boolean; message: string }>(`/api/auth/ai-configs/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // Admin Management & Stats
+  getAdminOverview: () =>
+    request<{ success: boolean; stats: any }>('/api/admin/overview'),
+
+  getAdminUsers: () =>
+    request<{ success: boolean; users: any[] }>('/api/admin/users'),
+
+  renewUserQuota: (
+    userId: number,
+    payload: {
+      subscription_expires_at?: string;
+      add_days?: number;
+      max_pages?: number;
+      max_agents?: number;
+      plan?: 'free' | 'pro' | 'enterprise';
+      role?: 'admin' | 'user';
+      is_active?: boolean;
+    }
+  ) =>
+    request<{ success: boolean; message: string; user: any }>(`/api/admin/users/${userId}/renew`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+
+  createAdminUser: (payload: {
+    email: string;
+    password: string;
+    role?: 'admin' | 'user';
+    plan?: 'free' | 'pro' | 'enterprise';
+    max_pages?: number;
+    max_agents?: number;
+    subscription_days?: number;
+  }) =>
+    request<{ success: boolean; message: string; user: any }>('/api/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  toggleUserStatus: (userId: number) =>
+    request<{ success: boolean; message: string; is_active: boolean }>(`/api/admin/users/${userId}/toggle-status`, {
+      method: 'POST',
+    }),
+
+  deleteAdminUser: (userId: number) =>
+    request<{ success: boolean; message: string }>(`/api/admin/users/${userId}`, {
+      method: 'DELETE',
+    }),
 };

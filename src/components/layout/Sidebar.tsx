@@ -10,6 +10,8 @@ import {
   Settings,
   ChevronDown,
   ShieldAlert,
+  ShieldCheck,
+  LogOut,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -21,7 +23,8 @@ export type NavTab =
   | 'calendar'
   | 'prompts'
   | 'pages'
-  | 'settings';
+  | 'settings'
+  | 'admin';
 
 interface SidebarProps {
   currentTab: NavTab;
@@ -29,11 +32,11 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => {
-  const { pages, activePage, activePageId, setActivePageId } = useAuth();
+  const { user, pages, activePage, activePageId, setActivePageId, logout } = useAuth();
 
   const totalUnhanlded = pages.reduce((acc, p) => acc + (p.unhandled_count || 0), 0);
 
-  const navItems: Array<{ id: NavTab; label: string; icon: React.ReactNode; badge?: number }> = [
+  const navItems: Array<{ id: NavTab; label: string; icon: React.ReactNode; badge?: number; badgeText?: string }> = [
     { id: 'dashboard', label: 'Tổng quan Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
     {
       id: 'inbox',
@@ -47,6 +50,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
     { id: 'prompts', label: 'Cấu hình Prompt AI', icon: <FileCode2 className="w-4 h-4" /> },
     { id: 'pages', label: 'Quản lý Fanpage', icon: <Layers className="w-4 h-4" />, badge: pages.length },
     { id: 'settings', label: 'Cài đặt & Webhook', icon: <Settings className="w-4 h-4" /> },
+    ...(user?.role === 'admin'
+      ? [{
+          id: 'admin' as NavTab,
+          label: 'Quản trị Admin',
+          icon: <ShieldCheck className="w-4 h-4 text-purple-600" />,
+          badgeText: 'Admin',
+        }]
+      : []),
   ];
 
   return (
@@ -117,6 +128,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
                 </span>
                 <span className="truncate">{item.label}</span>
               </div>
+              {item.badgeText && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-purple-100 text-purple-700">
+                  {item.badgeText}
+                </span>
+              )}
               {item.badge !== undefined && item.badge > 0 && (
                 <span
                   className={`text-[10px] font-mono font-medium px-1.5 py-0.5 rounded-md ${
@@ -147,15 +163,42 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
       )}
 
       {/* Footer Profile */}
-      <div className="p-3 border-t border-slate-200 bg-slate-50/50 flex items-center justify-between">
-        <div className="min-w-0">
-          <span className="text-xs font-medium text-slate-900 block truncate">
-            Mingo Administrator
-          </span>
-          <span className="text-[11px] text-slate-500 block font-mono truncate">
-            Gemini 3.8 Flash AI
-          </span>
+      <div className="p-3 border-t border-slate-200 bg-slate-50/70 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-semibold text-xs flex items-center justify-center shrink-0 uppercase shadow-xs">
+            {user?.email ? user.email.charAt(0) : 'U'}
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-slate-900 block truncate max-w-[95px]" title={user?.email || 'Mingo Administrator'}>
+                {user?.email?.split('@')[0] || 'admin'}
+              </span>
+              {user?.role === 'admin' ? (
+                <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 font-bold text-[9px] rounded uppercase shrink-0">
+                  Admin
+                </span>
+              ) : (
+                <span className="px-1.5 py-0.5 bg-slate-200 text-slate-700 font-medium text-[9px] rounded uppercase shrink-0">
+                  {user?.plan || 'PRO'}
+                </span>
+              )}
+            </div>
+            <span className="text-[11px] text-slate-500 block truncate mt-0.5">
+              Gói {user?.plan?.toUpperCase() || 'PRO'} • {pages.length}/{user?.max_pages || 5} Page
+            </span>
+          </div>
         </div>
+
+        <button
+          type="button"
+          onClick={() => logout()}
+          className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition-colors cursor-pointer shrink-0"
+          title="Thoát tài khoản"
+          aria-label="Thoát tài khoản"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span className="text-[11px] font-medium">Thoát</span>
+        </button>
       </div>
     </aside>
   );

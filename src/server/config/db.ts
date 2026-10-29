@@ -129,6 +129,21 @@ export function initDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS saved_ai_configs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      model TEXT NOT NULL,
+      base_url TEXT,
+      api_key_encrypted TEXT,
+      is_default BOOLEAN DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_saved_ai_configs_user ON saved_ai_configs(user_id, is_default);
     CREATE INDEX IF NOT EXISTS idx_msgs_page_time ON messages(page_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_comments_page_time ON comments(page_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_sched_status_time ON scheduled_posts(status, scheduled_at);
@@ -147,8 +162,27 @@ export function initDatabase() {
   try {
     db.exec('ALTER TABLE prompts ADD COLUMN ai_model TEXT DEFAULT NULL;');
   } catch {}
+  try {
+    db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user';");
+  } catch {}
+  try {
+    db.exec("ALTER TABLE users ADD COLUMN plan TEXT DEFAULT 'pro';");
+  } catch {}
+  try {
+    db.exec("ALTER TABLE users ADD COLUMN subscription_expires_at DATETIME DEFAULT '2027-12-31 23:59:59';");
+  } catch {}
+  try {
+    db.exec('ALTER TABLE users ADD COLUMN max_pages INTEGER DEFAULT 5;');
+  } catch {}
+  try {
+    db.exec('ALTER TABLE users ADD COLUMN max_agents INTEGER DEFAULT 10;');
+  } catch {}
+  try {
+    db.exec('ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT 1;');
+  } catch {}
 
   seedInitialData();
+  ensureAdminAndSeedAdditionalUsers();
 }
 
 function seedInitialData() {
@@ -410,4 +444,157 @@ Inbox ngay hôm nay để giữ suất quà tặng giới hạn bạn nhé! ❤�
   logInsert.run(page1Id, 'reply_comment', JSON.stringify({ author: 'Phạm Quỳnh Anh', status: 'replied' }));
   logInsert.run(page1Id, 'reply_comment', JSON.stringify({ author: 'Tài Xỉu Uy Tín 88', status: 'hidden', reason: 'Spam keyword' }));
   logInsert.run(page1Id, 'publish_post', JSON.stringify({ title: 'Khai trương BST Khung Tranh Canvas 2026', fb_post_id: 'fb_post_881' }));
+}
+
+export function seedDefaultAiConfigsForUser(userId: number) {
+  const count = db.prepare('SELECT COUNT(*) as count FROM saved_ai_configs WHERE user_id = ?').get(userId) as { count: number };
+  if (count.count > 0) return;
+
+  const insertConfig = db.prepare(`
+    INSERT INTO saved_ai_configs (user_id, name, provider, model, base_url, is_default)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+
+  insertConfig.run(userId, 'Google Gemini 3.5 Flash (Tiêu chuẩn)', 'gemini', 'gemini-3.5-flash', 'https://generativelanguage.googleapis.com', 1);
+  insertConfig.run(userId, 'OpenAI GPT-4o-mini (Cân bằng & Chính xác)', 'openai', 'gpt-4o-mini', 'https://api.openai.com/v1', 0);
+  insertConfig.run(userId, 'DeepSeek V3 Chat (Tiết kiệm tối đa)', 'deepseek', 'deepseek-chat', 'https://api.deepseek.com/v1', 0);
+  insertConfig.run(userId, 'Claude 3.5 Sonnet (Văn phong cao cấp)', 'anthropic', 'claude-3-5-sonnet-20241022', 'https://api.anthropic.com/v1', 0);
+  insertConfig.run(userId, 'Groq Llama 3.3 70B (Tốc độ tức thì)', 'groq', 'llama-3.3-70b-versatile', 'https://api.groq.com/openai/v1', 0);
+  insertConfig.run(userId, 'OpenRouter Auto (200+ Model thế giới)', 'openrouter', 'meta-llama/llama-3.3-70b-instruct', 'https://openrouter.ai/api/v1', 0);
+  insertConfig.run(userId, 'Local Ollama Llama 3 (Nội bộ on-premise)', 'custom', 'llama3', 'http://localhost:11434/v1', 0);
+}
+
+function ensureAdminAndSeedAdditionalUsers() {
+  // Ensure primary user is admin
+  db.prepare(`
+    UPDATE users
+    SET role = 'admin',
+        plan = 'enterprise',
+        subscription_expires_at = COALESCE(subscription_expires_at, '2027-12-31 23:59:59'),
+        max_pages = CASE WHEN max_pages < 25 THEN 25 ELSE max_pages END,
+        max_agents = CASE WHEN max_agents < 50 THEN 50 ELSE max_agents END,
+        is_active = 1
+    WHERE email = 'khunganhredepmingo@gmail.com'
+  `).run();
+
+  const allUsers = db.prepare('SELECT id FROM users').all() as Array<{ id: number }>;
+  for (const u of allUsers) {
+    seedDefaultAiConfigsForUser(u.id);
+  }
+
+  // Seed sample real-world users for the Admin Dashboard to monitor
+  const demoUsers = [
+    {
+      email: 'shopgiasi@gmail.com',
+      plan: 'pro',
+      role: 'user',
+      expiresInDays: 30,
+      maxPages: 5,
+      maxAgents: 10,
+      pages: [
+        { name: 'Tổng Kho Sỉ Đồ Gia Dụng Hà Nội', pageId: '492817293019283', msgs: 18, cmts: 42 },
+        { name: 'Gia Dụng Thông Minh Mingo Express', pageId: '492817293019284', msgs: 9, cmts: 21 },
+      ],
+      agents: [
+        { name: 'Tư vấn Chốt đơn Sỉ (Gemini)', provider: 'gemini', model: 'gemini-3.5-flash', is_default: 1 },
+        { name: 'Xử lý Bình luận Báo giá (DeepSeek)', provider: 'deepseek', model: 'deepseek-chat', is_default: 0 },
+      ],
+    },
+    {
+      email: 'mypham.zen@gmail.com',
+      plan: 'free',
+      role: 'user',
+      expiresInDays: 3, // Sắp hết hạn!
+      maxPages: 2,
+      maxAgents: 3,
+      pages: [
+        { name: 'Zen Cosmetics & Skincare Authentic', pageId: '581928374619281', msgs: 34, cmts: 15 },
+      ],
+      agents: [
+        { name: 'Chuyên viên Da liễu AI (GPT-4o)', provider: 'openai', model: 'gpt-4o-mini', is_default: 1 },
+      ],
+    },
+    {
+      email: 'thoitrangnam.hcm@gmail.com',
+      plan: 'pro',
+      role: 'user',
+      expiresInDays: -5, // ĐÃ HẾT HẠN!
+      maxPages: 3,
+      maxAgents: 5,
+      pages: [
+        { name: 'MenStyle Studio Saigon', pageId: '691827364519282', msgs: 12, cmts: 8 },
+      ],
+      agents: [
+        { name: 'Stylist Thời Trang Nam (Claude)', provider: 'anthropic', model: 'claude-3-5-sonnet-20241022', is_default: 1 },
+      ],
+    },
+    {
+      email: 'studio.wedding@gmail.com',
+      plan: 'enterprise',
+      role: 'user',
+      expiresInDays: 240,
+      maxPages: 15,
+      maxAgents: 30,
+      pages: [
+        { name: 'Mingo Wedding Art & Studio', pageId: '782910293847561', msgs: 58, cmts: 76 },
+        { name: 'Pre-Wedding Film Saigon', pageId: '782910293847562', msgs: 25, cmts: 33 },
+      ],
+      agents: [
+        { name: 'Wedding Consultant AI (Gemini)', provider: 'gemini', model: 'gemini-3.5-flash', is_default: 1 },
+        { name: 'Chăm sóc Hậu mãi Studio (GPT-4o)', provider: 'openai', model: 'gpt-4o-mini', is_default: 0 },
+        { name: 'Groq Speed Responder', provider: 'groq', model: 'llama-3.3-70b-versatile', is_default: 0 },
+      ],
+    },
+  ];
+
+  const pwHash = bcrypt.hashSync('password123', 10);
+  const now = Date.now();
+
+  for (const item of demoUsers) {
+    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(item.email) as { id: number } | undefined;
+    if (!existing) {
+      const expiresAt = new Date(now + item.expiresInDays * 86400000).toISOString().replace('T', ' ').substring(0, 19);
+      const res = db.prepare(`
+        INSERT INTO users (email, password_hash, ai_provider, role, plan, subscription_expires_at, max_pages, max_agents, is_active)
+        VALUES (?, ?, 'gemini', ?, ?, ?, ?, ?, 1)
+      `).run(item.email, pwHash, item.role, item.plan, expiresAt, item.maxPages, item.maxAgents);
+      const newUserId = Number(res.lastInsertRowid);
+
+      // Seed pages
+      for (const p of item.pages) {
+        const pageRes = db.prepare(`
+          INSERT INTO pages (user_id, page_id, page_name, page_access_token_encrypted, avatar_url, is_active, auto_reply_messages, auto_reply_comments)
+          VALUES (?, ?, ?, ?, ?, 1, 1, 1)
+        `).run(
+          newUserId,
+          p.pageId,
+          p.name,
+          encryptData('DEMO_TOKEN_' + p.pageId),
+          'https://images.unsplash.com/photo-1544717305-2782549b5136?w=150&auto=format&fit=crop&q=80'
+        );
+        const pId = Number(pageRes.lastInsertRowid);
+
+        for (let i = 1; i <= Math.min(p.msgs, 5); i++) {
+          db.prepare(`
+            INSERT INTO messages (page_id, fb_message_id, sender_id, sender_name, content, direction, ai_generated, status, requires_human, intent, sentiment, created_at)
+            VALUES (?, ?, ?, ?, ?, 'in', 0, 'sent', 0, 'general_inquiry', 'neutral', ?)
+          `).run(pId, `demo_msg_${pId}_${i}`, `demo_user_${i}`, `Khách Hàng ${i}`, `Chào shop, cho mình hỏi thông tin sản phẩm mẫu số ${i}`, new Date(now - i * 1800000).toISOString());
+        }
+
+        for (let j = 1; j <= Math.min(p.cmts, 5); j++) {
+          db.prepare(`
+            INSERT INTO comments (page_id, post_id, fb_comment_id, author_id, author_name, content, ai_reply, status, created_at)
+            VALUES (?, 'demo_post_1', ?, ?, ?, ?, 'Dạ shop đã gửi inbox tư vấn cho bạn rồi ạ! ✨', 'replied', ?)
+          `).run(pId, `demo_cmt_${pId}_${j}`, `demo_author_${j}`, `Người Dùng ${j}`, `Sản phẩm này còn hàng không shop ơi?`, new Date(now - j * 2400000).toISOString());
+        }
+      }
+
+      for (const ag of item.agents) {
+        db.prepare(`
+          INSERT INTO saved_ai_configs (user_id, name, provider, model, is_default)
+          VALUES (?, ?, ?, ?, ?)
+        `).run(newUserId, ag.name, ag.provider, ag.model, ag.is_default);
+      }
+    }
+  }
 }

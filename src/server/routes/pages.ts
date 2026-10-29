@@ -56,6 +56,24 @@ pagesRouter.post('/', authMiddleware, async (req: AuthRequest, res) => {
   }
 
   try {
+    const user = db.prepare('SELECT max_pages, subscription_expires_at FROM users WHERE id = ?').get(req.user!.id) as any;
+    const maxPages = user?.max_pages || 5;
+
+    if (user?.subscription_expires_at && new Date(user.subscription_expires_at).getTime() < Date.now()) {
+      return res.status(403).json({
+        success: false,
+        error: 'Thời hạn gói dịch vụ đã hết hạn. Vui lòng liên hệ Admin để gia hạn thời gian sử dụng.',
+      });
+    }
+
+    const currentPagesCount = db.prepare('SELECT COUNT(*) as count FROM pages WHERE user_id = ?').get(req.user!.id) as { count: number };
+    if (currentPagesCount.count >= maxPages) {
+      return res.status(403).json({
+        success: false,
+        error: `Tài khoản đã đạt giới hạn tối đa ${maxPages} Fanpage (${currentPagesCount.count}/${maxPages}). Vui lòng liên hệ Admin để gia hạn thêm.`,
+      });
+    }
+
     const encryptedToken = encryptData(page_access_token.trim());
     const finalName = page_name ? page_name.trim() : `Fanpage (${page_id})`;
 

@@ -14,6 +14,7 @@ import { promptsRouter } from './src/server/routes/prompts';
 import { aiRouter } from './src/server/routes/ai';
 import { webhookRouter } from './src/server/routes/webhook';
 import { analyticsRouter } from './src/server/routes/analytics';
+import { adminRouter } from './src/server/routes/admin';
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ async function startServer() {
 
   // API Routes
   app.use('/api/auth', authRouter);
+  app.use('/api/admin', adminRouter);
   app.use('/api/pages', pagesRouter);
   app.use('/api/messages', messagesRouter);
   app.use('/api/comments', commentsRouter);
